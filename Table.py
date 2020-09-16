@@ -83,12 +83,20 @@ class Table:
                 self.add_row(row_data)
 
     def to_csv(self, path):
-        with open(path + self.__table_name__ + '.csv') as file:
+        with open(path + self.__table_name__ + '.csv', 'w') as file:
             for i in range(len(self.columns)):
-                file.write(str(self.columns[i]))
+                if i == 0:
+                    file.write(str(self.columns[i]))
+                else:
+                    file.write(SEPARATOR + str(self.columns[i]))
             file.write('\n')
             for i in range(len(self.rows)):
-                file.write(str(self.rows[i] + '\n'))
+                for j in range(len(self.rows[i])):
+                    if j == 0:
+                        file.write(str(self.rows[i][j]))
+                    else:
+                        file.write(SEPARATOR + str(self.rows[i][j]))
+                file.write('\n')
 
     def show(self):
         print('TABLE: ' + self.__table_name__)

@@ -152,4 +152,24 @@ if data.get('backgroundAndMethodology'):
         assessmentAppointments_table.add_rows_from_value_headers_type(backgroundAndMethodology['assessmentAppointments']['values'])
         tables.append(assessmentAppointments_table)
 
+if data.get('proposedObjectives'):
+    proposedObjectives_table = Table('proposed_objectives')
+    strengths_table = Table('strengths')
+    objectives_table = Table('objectives')
+    for proposedObjective in data['proposedObjectives']:
+        if not proposedObjectives_table.columns_added:
+            proposedObjectives_table.add_column_from_dict(proposedObjective)
+            proposedObjectives_table.columns_added = True
+        proposedObjectives_table.add_rows_from_dict(proposedObjective)
+
+        if proposedObjective.get('strengths'):
+            if not strengths_table.columns_added:
+                strengths_table.add_column('strengths')
+                strengths_table.columns_added = True
+            strengths_table.add_string_list_rows(proposedObjective['strengths'])
+    tables.append(proposedObjectives_table)
+
+for table in tables:
+    table.to_csv(dirFilePath)
+
 
