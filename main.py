@@ -6,17 +6,31 @@ ID = '__id'
 ROWS = 'rows'
 COLUMNS = 'columns'
 SEPARATOR = ','
+NULL = 'null'
 dirFilePath = '/home/user/Downloads/'
 jsonFileName = 'dataFile.json'
 
+PROPOSED_OBJECTIVES = 'proposedObjectives'
+STRENGTHS = 'strengths'
+OBJECTIVES = 'objectives'
+OBJECTIVES_FIELDS = 'fields'
+ORIGINAL_OBJECTIVE = 'originalObjective'
+PHASECHANGEEVENTTYPES = 'phaseChangeEventTypes'
+
+
 # removing '\n' symbols from string
-remove_enters = lambda string: string.replace('\n', ' ')
+def remove_enters(string):
+    return string.replace('\n', ' ')
+
 
 # returning simple data from dict: columns + rows
-get_simple_data = lambda json_element, json_element_name: get_keys_string(json_element, json_element_name) + '\n' + get_values_string(json_element, json_element_name)
+def get_simple_data(json_element, json_element_name):
+    return get_keys_string(json_element, json_element_name) + '\n' + get_values_string(json_element, json_element_name)
+
 
 # object is composite or primitive
-is_composite_type = lambda element: type(element) is dict or type(element) is list
+def is_composite_type(element):
+    return type(element) is dict or type(element) is list
 
 
 # ID counter. Need to get unique record ID
@@ -45,8 +59,21 @@ def get_values_string(json_element, table_name):
     for key in json_element:
         if is_composite_type(json_element[key]):
             continue
-        rows += SEPARATOR + str(json_element[key])
+        if json_element[key]:
+            rows += SEPARATOR + str(json_element[key])
+        else:
+            rows += SEPARATOR + NULL
     return remove_enters(rows)
+
+
+def get_values_string_list(json_element, table_name):
+    rows = ''
+    for i in range(len(json_element)):
+        if not json_element[i]:
+            continue
+        rows += str(get_record_id(table_name)) + SEPARATOR + str(json_element[i]) + '\n'
+    return rows
+
 
 # return table from list of simple dict
 def get_simple_dict_list(json_element, table_name):
@@ -115,11 +142,6 @@ def upsert_table(csv_data, table_name, columns_string):
 
 
 def get_proposedObjectives(files, data):
-    PROPOSED_OBJECTIVES = 'proposedObjectives'
-    STRENGTHS = 'strengths'
-    OBJECTIVES = 'objectives'
-    OBJECTIVES_FIELDS = 'fields'
-    ORIGINAL_OBJECTIVE = 'originalObjective'
     if len(data[PROPOSED_OBJECTIVES]) == 0:
         return
     csv_data = {
@@ -129,20 +151,23 @@ def get_proposedObjectives(files, data):
         }
     }
     for proposed_objective in data[PROPOSED_OBJECTIVES]:
-        csv_data[PROPOSED_OBJECTIVES][ROWS] += get_values_string(proposed_objective, PROPOSED_OBJECTIVES)
+        csv_data[PROPOSED_OBJECTIVES][ROWS] += get_values_string(proposed_objective, PROPOSED_OBJECTIVES) + '\n'
         if proposed_objective.get(STRENGTHS) and len(proposed_objective[STRENGTHS]) > 0:
             upsert_table(csv_data, STRENGTHS, STRENGTHS + ID + SEPARATOR + STRENGTHS)
-            csv_data[STRENGTHS][ROWS] += str(get_record_id(STRENGTHS)) + SEPARATOR + get_list_values(proposed_objective[STRENGTHS])
-
+            csv_data[STRENGTHS][ROWS] += get_values_string_list(proposed_objective[STRENGTHS], STRENGTHS)
         if proposed_objective.get(OBJECTIVES) and len(proposed_objective[OBJECTIVES]) > 0:
             upsert_table(csv_data, OBJECTIVES, get_keys_string(proposed_objective[OBJECTIVES][0], OBJECTIVES))
             for objective in proposed_objective[OBJECTIVES]:
-                csv_data[OBJECTIVES][ROWS] += get_values_string(objective, OBJECTIVES)
-                if objective.get(OBJECTIVES_FIELDS) and len(objective[OBJECTIVES_FIELDS]) > 0:
-                    upsert_table(csv_data, OBJECTIVES_FIELDS, OBJECTIVES_FIELDS + ID + SEPARATOR)
-                    csv_data[OBJECTIVES_FIELDS][ROWS] += str(get_record_id(OBJECTIVES_FIELDS))
-    print('+++++++++++++++++++++++++++++++')
-    print(csv_data[STRENGTHS])
+                csv_data[OBJECTIVES][ROWS] += get_values_string(objective, OBJECTIVES) + '\n'
+                upsert_table(csv_data, PHASECHANGEEVENTTYPES, PHASECHANGEEVENTTYPES + ID + SEPARATOR + 'type' + SEPARATOR + 'value' + '\n')
+                for key in objective[PHASECHANGEEVENTTYPES]:
+                    for i in range(len(objective[PHASECHANGEEVENTTYPES][key])):
+                        string_to_insert = key + SEPARATOR + str(objective[PHASECHANGEEVENTTYPES][key][i]) + '\n'
+                        if csv_data[PHASECHANGEEVENTTYPES][ROWS].find(string_to_insert) == -1:
+                            csv_data[PHASECHANGEEVENTTYPES][ROWS] += str(get_record_id(PHASECHANGEEVENTTYPES)) + SEPARATOR + string_to_insert
+
+    print(csv_data[STRENGTHS][COLUMNS])
+    print(csv_data[STRENGTHS][ROWS])
 
 
 
@@ -160,7 +185,6 @@ def json_to_csv(data):
         'services': get_value_header_table(data['assessmentResults']['services'], 'services'),
         'vineland': get_simple_data(data['assessmentResults']['vineland'], 'vineland'),
         'info': get_simple_data(data['assessmentResults']['vineland']['info'], 'info'),
-        'proposedObjectives': get_simple_dict_list(data['proposedObjectives'], 'proposedObjectives'),
         'educationalServices':get_value_header_table(data['assessmentResults']['educationalServices'], 'educationalServices'),
         'backgroundAndMethodology': get_value_header_table(data['backgroundAndMethodology']['assessmentAppointments'], 'assessmentAppointments'),
         'academicPerformance.csv': get_simple_data(data['assessmentResults']['academicPerformance'], 'academicPerformance'),
@@ -171,10 +195,10 @@ def json_to_csv(data):
         'maladaptiveBehaviorIndex': get_data_header(data['assessmentResults']['vineland']['maladaptiveBehaviorIndex'], 'maladaptiveBehaviorIndex', ['type', 'placeholder', 'editable', 'header', 'subHeader']),
     }
     get_proposedObjectives(files, data)
-    for key in files:
-        print('-----------------------------------------------------')
-        print('KEY: ' + str(key))
-        print(str(files[key]))
+    #for key in files:
+        #print('-----------------------------------------------------')
+        #print('KEY: ' + str(key))
+        #print(str(files[key]))
 
 
 with open(dirFilePath + jsonFileName) as jsonFile:
