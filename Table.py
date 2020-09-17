@@ -54,8 +54,7 @@ class Table:
 
     def add_row(self, record_fields):
         if self.parent_ids:
-            for parent_id in range(len(self.parent_ids)):
-                record_fields.insert(0, parent_id)
+            record_fields.extend(self.parent_ids)
         if len(record_fields) != (len(self.columns) - 1):
             print('Structure ERROR')
             return
@@ -111,7 +110,7 @@ class Table:
                 file.write('\n')
 
     def get_last_id(self):
-        return self.id_counter
+        return self.id_counter - 1
 
     def show(self):
         print('TABLE: ' + self.__table_name__)
