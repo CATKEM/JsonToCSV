@@ -1,5 +1,5 @@
 ID = 'Id'
-SEPARATOR = ','
+SEPARATOR = '*'
 EMPTY_COLUMN_NAME = 'COLUMN_WITHOUT_NAME_'
 
 
@@ -9,13 +9,28 @@ class Table:
     columns = []
     rows = []
     columns_added = False
+    parent_ids = None
 
-    def __init__(self, table_name):
+    def __init__(self, table_name, simple_dict=None, parent_name_to_id=None):
         self.__table_name__ = table_name
         self.columns = []
         self.rows = []
         self.columns.append(ID)
         self.columns_added = False
+        if parent_name_to_id:
+            self.columns.extend(parent_name_to_id.keys())
+            self.parent_ids = parent_name_to_id.values()
+        if simple_dict:
+            self.add_row_column_from_dict(simple_dict)
+
+    def add_row_column_from_dict(self, dict_data):
+        row = []
+        for key in dict_data:
+            if type(dict_data[key]) is list or type(dict_data[key]) is dict or type(dict_data[key]) is tuple:
+                continue
+            self.add_column(key)
+            row.append(dict_data[key])
+        self.add_row(row)
 
     def add_columns(self, column_name):
         for i in range(len(column_name)):
@@ -38,17 +53,16 @@ class Table:
         return True
 
     def add_row(self, record_fields):
+        if self.parent_ids:
+            for parent_id in range(len(self.parent_ids)):
+                record_fields.insert(0, parent_id)
         if len(record_fields) != (len(self.columns) - 1):
             print('Structure ERROR')
-            return False
+            return
         record_fields.insert(0, str(self.id_counter))
         self.rows.append(record_fields)
         self.id_counter += 1
-        return True
-
-    def add_rows(self, rows):
-        for i in range(len(rows)):
-            self.add_row(rows[i])
+        return
 
     def add_string_list_rows(self, rows):
         for i in range(len(rows)):
@@ -64,8 +78,6 @@ class Table:
 
     def add_rows_from_value_headers_type(self, value_elements):
         for value_element in value_elements:
-            if len(value_element) != (len(self.columns) - 1):
-                continue
             self.add_row(value_element)
 
     def add_rows_from_data_headers_type(self, data, elements_name):
@@ -97,6 +109,9 @@ class Table:
                     else:
                         file.write(SEPARATOR + str(self.rows[i][j]))
                 file.write('\n')
+
+    def get_last_id(self):
+        return self.id_counter
 
     def show(self):
         print('TABLE: ' + self.__table_name__)
