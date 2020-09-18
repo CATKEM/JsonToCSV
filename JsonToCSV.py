@@ -251,7 +251,7 @@ if data.get(PROPOSED_OBJECTIVES):
                         objectives_fields_table.parent_ids = [objectives_table.get_last_id()]
                         objectives_fields_table.__add_row__([field['name'], field['value']])
 
-    tables.append(proposedObjectives_table)-
+    tables.append(proposedObjectives_table)
     tables.append(strengths_table)
     tables.append(objectives_table)
     objectives_fields_table.show()
