@@ -1,7 +1,4 @@
-ID = 'Id'
-PARENT_ID = '_id'
-SEPARATOR = '*'
-EMPTY_COLUMN_NAME = 'COLUMN_WITHOUT_NAME_'
+import Constants as const
 
 
 class Table:
@@ -16,12 +13,12 @@ class Table:
         self.table_name = table_name
         self.columns = []
         self.rows = []
-        self.columns.append(ID)
+        self.columns.append(const.ID)
         self.columns_added = False
         if parent_name_to_id:
             columns_to_insert = []
             for key in parent_name_to_id:
-                columns_to_insert.append(str(key) + PARENT_ID)
+                columns_to_insert.append(str(key) + const.PARENT_ID)
             self.columns.extend(columns_to_insert)
             self.parent_ids = parent_name_to_id.values()
         if simple_dict:
@@ -29,7 +26,7 @@ class Table:
 
     def __add_column__(self, column_name):
         if not column_name:
-            column_name = EMPTY_COLUMN_NAME + str(self.id_counter)
+            column_name = const.EMPTY_COLUMN_NAME + str(self.id_counter)
         column_name = column_name.lower()
         column_name = column_name.replace(' ', '_')
         self.columns.append(str(column_name))
@@ -41,9 +38,12 @@ class Table:
                 fields_list.insert(0, parent_id)
         if len(fields_list) != (len(self.columns) - 1):
             print('Structure ERROR: ' + self.table_name)
-            # return
+            return
         fields_list.insert(0, str(self.id_counter))
-        self.rows.append(fields_list)
+        str_fields_list = []
+        for field in fields_list:
+            str_fields_list.append(str(field).replace('\n', ' '))
+        self.rows.append(str_fields_list)
         self.id_counter += 1
 
     def add_row_column_from_dict(self, dict_data):
@@ -71,13 +71,15 @@ class Table:
                 self.__add_column__(key)
             self.lock_add_columns = True
 
-    def add_exists_elements_to_row(self, dict_data, elements_list):
+    def add_exists_elements_to_row(self, dict_data, elements_list, add_last=None):
         row_to_insert = []
         for element in elements_list:
             if not dict_data.get(element) == None:
                 row_to_insert.append(dict_data[element])
             else:
                 row_to_insert.append('null')
+        if add_last:
+            row_to_insert.extend(add_last)
         self.__add_row__(row_to_insert)
 
     def add_string_list_rows(self, rows):
@@ -116,16 +118,16 @@ class Table:
                 if i == 0:
                     file.write(str(self.columns[i]))
                 else:
-                    file.write(SEPARATOR + str(self.columns[i]))
+                    file.write(const.SEPARATOR + str(self.columns[i]))
             file.write('\n')
             for i in range(len(self.rows)):
                 for j in range(len(self.rows[i])):
                     if j == 0:
                         file.write(str(self.rows[i][j]))
                     else:
-                        file.write(SEPARATOR + str(self.rows[i][j]))
+                        file.write(const.SEPARATOR + str(self.rows[i][j]))
                 file.write('\n')
-        print('TABLE: ' + self.table_name + ' was created!')
+        print('TABLE: ' + self.table_name + ' CREATED!')
 
     def get_last_id(self):
         return self.id_counter - 1
