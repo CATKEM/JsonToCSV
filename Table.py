@@ -8,11 +8,11 @@ class Table:
     id_counter = 1
     columns = []
     rows = []
-    columns_added = False
+    lock_add_columns = False
     parent_ids = None
 
     def __init__(self, table_name, simple_dict=None, parent_name_to_id=None):
-        self.__table_name__ = table_name
+        self.table_name = table_name
         self.columns = []
         self.rows = []
         self.columns.append(ID)
@@ -23,21 +23,7 @@ class Table:
         if simple_dict:
             self.add_row_column_from_dict(simple_dict)
 
-    def add_row_column_from_dict(self, dict_data):
-        row = []
-        for key in dict_data:
-            if type(dict_data[key]) is list or type(dict_data[key]) is dict or type(dict_data[key]) is tuple:
-                continue
-            self.add_column(key)
-            row.append(dict_data[key])
-        self.add_row(row)
-
-    def add_columns(self, column_name):
-        for i in range(len(column_name)):
-            self.add_column(column_name[i])
-        return self.columns
-
-    def add_column(self, column_name):
+    def __add_column__(self, column_name):
         if not column_name:
             column_name = EMPTY_COLUMN_NAME + str(self.id_counter)
         column_name = column_name.lower()
@@ -45,27 +31,53 @@ class Table:
         self.columns.append(str(column_name))
         return self.columns
 
-    def add_column_from_dict(self, dict_data):
+    def __add_row__(self, fields_list):
+        if self.parent_ids:
+            fields_list.extend(self.parent_ids)
+        if len(fields_list) != (len(self.columns) - 1):
+            print('Structure ERROR')
+            return
+        fields_list.insert(0, str(self.id_counter))
+        self.rows.append(fields_list)
+        self.id_counter += 1
+
+    def add_row_column_from_dict(self, dict_data):
+        row = []
         for key in dict_data:
             if type(dict_data[key]) is list or type(dict_data[key]) is dict or type(dict_data[key]) is tuple:
                 continue
-            self.add_column(key)
-        return True
+            if not self.lock_add_columns:
+                self.__add_column__(key)
+            row.append(dict_data[key])
+        self.lock_add_columns = True
+        self.__add_row__(row)
 
-    def add_row(self, record_fields):
-        if self.parent_ids:
-            record_fields.extend(self.parent_ids)
-        if len(record_fields) != (len(self.columns) - 1):
-            print('Structure ERROR')
-            return
-        record_fields.insert(0, str(self.id_counter))
-        self.rows.append(record_fields)
-        self.id_counter += 1
-        return
+    def add_columns(self, columns_list):
+        if not self.lock_add_columns:
+            for i in range(len(columns_list)):
+                self.__add_column__(columns_list[i])
+            self.lock_add_columns = True
+
+    def add_column_from_dict(self, dict_data):
+        if not self.lock_add_columns:
+            for key in dict_data:
+                if type(dict_data[key]) is list or type(dict_data[key]) is dict or type(dict_data[key]) is tuple:
+                    continue
+                self.__add_column__(key)
+            self.lock_add_columns = True
+
+    def add_exists_elements_to_row(self, dict_data, elements_list):
+        row_to_insert = []
+        for element in elements_list:
+            if dict_data.get(element):
+                row_to_insert.append(dict_data[element])
+            else:
+                row_to_insert.append('null')
+        self.__add_row__(row_to_insert)
 
     def add_string_list_rows(self, rows):
         for i in range(len(rows)):
-            self.add_row([rows[i]])
+            self.__add_row__([rows[i]])
 
     def add_rows_from_dict(self, dict_data):
         fields = []
@@ -73,11 +85,11 @@ class Table:
             if type(dict_data[key]) is list or type(dict_data[key]) is dict or type(dict_data[key]) is tuple:
                 continue
             fields.append(dict_data[key])
-        self.add_row(fields)
+        self.__add_row__(fields)
 
     def add_rows_from_value_headers_type(self, value_elements):
         for value_element in value_elements:
-            self.add_row(value_element)
+            self.__add_row__(value_element)
 
     def add_rows_from_data_headers_type(self, data, elements_name):
         for i in range(len(data['data'])):
@@ -91,10 +103,10 @@ class Table:
                         row_data.append(data['data'][i][j][element_name])
                     else:
                         row_data.append(False)
-                self.add_row(row_data)
+                self.__add_row__(row_data)
 
     def to_csv(self, path):
-        with open(path + self.__table_name__ + '.csv', 'w') as file:
+        with open(path + self.table_name + '.csv', 'w') as file:
             for i in range(len(self.columns)):
                 if i == 0:
                     file.write(str(self.columns[i]))
@@ -108,12 +120,13 @@ class Table:
                     else:
                         file.write(SEPARATOR + str(self.rows[i][j]))
                 file.write('\n')
+        print('TABLE: ' + self.table_name + ' was created!')
 
     def get_last_id(self):
         return self.id_counter - 1
 
     def show(self):
-        print('TABLE: ' + self.__table_name__)
+        print('TABLE: ' + self.table_name)
         print(self.columns)
         for row in self.rows:
             print(row)

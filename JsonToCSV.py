@@ -26,10 +26,7 @@ if data.get(PERSONS):
     persons_table = Table(table_name=PERSONS,
                           parent_name_to_id={MAIN_TABLE_NAME: main_table.get_last_id()})
     for person in data[PERSONS]:
-        if not persons_table.columns_added:
-            persons_table.add_column_from_dict(person)
-            persons_table.columns_added = True
-        persons_table.add_rows_from_dict(person)
+        persons_table.add_row_column_from_dict(person)
     tables.append(persons_table)
 
 RECOMMENDATIONS = 'recommendations'
@@ -103,7 +100,7 @@ if data.get(ASSESSMENT_RESULTS):
     if assessmentResults.get(REVIEWED_RECORDS):
         reviewedRecords_table = Table(table_name='reviewed_records',
                                       parent_name_to_id={ASSESSMENT_RESULTS: assessmentResults_table.get_last_id()})
-        reviewedRecords_table.add_column(REVIEWED_RECORDS)
+        reviewedRecords_table.add_columns([REVIEWED_RECORDS])
         reviewedRecords_table.add_string_list_rows(assessmentResults[REVIEWED_RECORDS])
         tables.append(reviewedRecords_table)
 
@@ -147,9 +144,57 @@ if data.get(ASSESSMENT_RESULTS):
 
         INFO = 'info'
         if vineland.get(INFO):
-            tables.append(Table(table_name='vineland_info',
-                                simple_dict=vineland[INFO],
-                                parent_name_to_id={VINELAND: vineland_table.get_last_id()}))
+            vineland_info = vineland[INFO]
+            vineland_info_table = Table(table_name='vineland_info',
+                                        simple_dict=vineland[INFO],
+                                        parent_name_to_id={VINELAND: vineland_table.get_last_id()})
+            tables.append(vineland_info_table)
+
+            DATA = 'data'
+            if vineland_info.get(DATA):
+                info_data_table = Table(table_name='vineland_info_data',
+                                        parent_name_to_id={INFO: vineland_info_table.get_last_id()})
+                for info_data in vineland_info[DATA]:
+                    info_data_table.add_columns(['name', 'type', 'value', 'placeholder'])
+                    info_data_table.add_exists_elements_to_row(info_data, ['name', 'type', 'value', 'placeholder'])
+                tables.append(info_data_table)
+
+    APPENDICES = 'appendices'
+    ATTACHMENTS = 'attachments'
+    DATA = 'data'
+    IMAGES = 'images'
+    if assessmentResults.get(APPENDICES):
+        appendices_table = Table(table_name=APPENDICES,
+                                 parent_name_to_id={ASSESSMENT_RESULTS: assessmentResults_table.get_last_id()})
+        appendices_data_table = Table(table_name='appendices_data',
+                                      parent_name_to_id={APPENDICES: appendices_table.get_last_id()})
+        attachments_table = Table(table_name=ATTACHMENTS,
+                                  parent_name_to_id={APPENDICES: []})
+        images_table = Table(table_name=IMAGES,
+                             parent_name_to_id={ATTACHMENTS: []})
+        for one_appendices in assessmentResults[APPENDICES]:
+            appendices_table.add_row_column_from_dict(one_appendices)
+
+            if one_appendices.get(DATA):
+                for one_data in one_appendices[DATA]:
+                    appendices_table.parent_ids = [appendices_table.get_last_id()]
+                    appendices_data_table.add_columns(['name', 'type', 'value'])
+                    appendices_data_table.add_exists_elements_to_row(one_data, ['name', 'type', 'value'])
+
+            if one_appendices.get(ATTACHMENTS):
+                for one_attachment in one_appendices[ATTACHMENTS]:
+                    appendices_table.parent_ids = [appendices_table.get_last_id()]
+                    attachments_table.add_row_column_from_dict(one_attachment)
+
+                    if one_attachment.get(IMAGES):
+                        for image in one_attachment[IMAGES]:
+                            images_table.parent_ids = [appendices_table.get_last_id()]
+                            images_table.add_row_column_from_dict(image)
+
+        tables.append(appendices_table)
+        tables.append(appendices_data_table)
+        tables.append(images_table)
+
 BACKGROUND_AND_METHODOLOGY = 'backgroundAndMethodology'
 if data.get(BACKGROUND_AND_METHODOLOGY):
     backgroundAndMethodology = data[BACKGROUND_AND_METHODOLOGY]
@@ -162,7 +207,7 @@ if data.get(BACKGROUND_AND_METHODOLOGY):
     if backgroundAndMethodology.get(ASSESSMENT_RESULTS):
         assessmentResults_table = Table(table_name='background_and_methodology_assessment_results',
                                         parent_name_to_id={BACKGROUND_AND_METHODOLOGY: backgroundAndMethodology_table.get_last_id()})
-        assessmentResults_table.add_column(ASSESSMENT_RESULTS)
+        assessmentResults_table.add_columns([ASSESSMENT_RESULTS])
         assessmentResults_table.add_string_list_rows(backgroundAndMethodology[ASSESSMENT_RESULTS])
         tables.append(assessmentResults_table)
 
@@ -175,28 +220,43 @@ if data.get(BACKGROUND_AND_METHODOLOGY):
         tables.append(assessmentAppointments_table)
 
 PROPOSED_OBJECTIVES = 'proposedObjectives'
+STRENGTHS = 'strengths'
+OBJECTIVES = 'objectives'
+FIELDS = 'fields'
 if data.get(PROPOSED_OBJECTIVES):
     proposedObjectives_table = Table(table_name='proposed_objectives',
                                      parent_name_to_id={MAIN_TABLE_NAME: main_table.get_last_id()})
-    strengths_table = Table(table_name='strengths',
+    strengths_table = Table(table_name=STRENGTHS,
                             parent_name_to_id={PROPOSED_OBJECTIVES: []})
-    for proposedObjective in data['proposedObjectives']:
-        if not proposedObjectives_table.columns_added:
-            proposedObjectives_table.add_column_from_dict(proposedObjective)
-            proposedObjectives_table.columns_added = True
-        proposedObjectives_table.add_rows_from_dict(proposedObjective)
+    objectives_table = Table(table_name=OBJECTIVES,
+                             parent_name_to_id={PROPOSED_OBJECTIVES: []})
+    objectives_fields_table = Table(table_name='objective_fields',
+                              parent_name_to_id={OBJECTIVES: []})
+    for proposedObjective in data[PROPOSED_OBJECTIVES]:
+        proposedObjectives_table.add_row_column_from_dict(proposedObjective)
 
-        if proposedObjective.get('strengths'):
-            if not strengths_table.columns_added:
-                strengths_table.add_column('strengths')
-                strengths_table.columns_added = True
+        if proposedObjective.get(STRENGTHS):
+            strengths_table.add_columns([STRENGTHS])
             strengths_table.parent_ids = [proposedObjectives_table.get_last_id()]
-            strengths_table.add_string_list_rows(proposedObjective['strengths'])
+            strengths_table.add_string_list_rows(proposedObjective[STRENGTHS])
 
-    tables.append(proposedObjectives_table)
+        if proposedObjective.get(OBJECTIVES):
+            for objective in proposedObjective[OBJECTIVES]:
+                objectives_table.parent_ids = [proposedObjectives_table.get_last_id()]
+                objectives_table.add_row_column_from_dict(objective)
+
+                if objective.get(FIELDS):
+                    objectives_fields_table.add_columns(['name', 'value'])
+                    for field in objective[FIELDS]:
+                        objectives_fields_table.parent_ids = [objectives_table.get_last_id()]
+                        objectives_fields_table.__add_row__([field['name'], field['value']])
+
+    tables.append(proposedObjectives_table)-
     tables.append(strengths_table)
+    tables.append(objectives_table)
+    objectives_fields_table.show()
 
 for table in tables:
-    table.show()
+    table.to_csv(dirFilePath + 'Convert_Result/')
 
 
