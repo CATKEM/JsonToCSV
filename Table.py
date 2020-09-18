@@ -1,4 +1,5 @@
 ID = 'Id'
+PARENT_ID = '_id'
 SEPARATOR = '*'
 EMPTY_COLUMN_NAME = 'COLUMN_WITHOUT_NAME_'
 
@@ -18,7 +19,10 @@ class Table:
         self.columns.append(ID)
         self.columns_added = False
         if parent_name_to_id:
-            self.columns.extend(parent_name_to_id.keys())
+            columns_to_insert = []
+            for key in parent_name_to_id:
+                columns_to_insert.append(str(key) + PARENT_ID)
+            self.columns.extend(columns_to_insert)
             self.parent_ids = parent_name_to_id.values()
         if simple_dict:
             self.add_row_column_from_dict(simple_dict)
@@ -33,10 +37,11 @@ class Table:
 
     def __add_row__(self, fields_list):
         if self.parent_ids:
-            fields_list.extend(self.parent_ids)
+            for parent_id in self.parent_ids:
+                fields_list.insert(0, parent_id)
         if len(fields_list) != (len(self.columns) - 1):
-            print('Structure ERROR')
-            return
+            print('Structure ERROR: ' + self.table_name)
+            # return
         fields_list.insert(0, str(self.id_counter))
         self.rows.append(fields_list)
         self.id_counter += 1
@@ -69,7 +74,7 @@ class Table:
     def add_exists_elements_to_row(self, dict_data, elements_list):
         row_to_insert = []
         for element in elements_list:
-            if dict_data.get(element):
+            if not dict_data.get(element) == None:
                 row_to_insert.append(dict_data[element])
             else:
                 row_to_insert.append('null')
